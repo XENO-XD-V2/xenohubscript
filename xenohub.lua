@@ -3016,8 +3016,9 @@ _G.Title = "R2lx Hub Script blox fruits" -- คำอธิบาย
 local isUIEnabled = true 
 
 local function toggleUI()
-    -- Loop through the children of "Modules" to find any ScreenGui
-    for i, v in pairs(game.CoreGui:WaitForChild("RobloxGui"):WaitForChild("Modules"):GetChildren()) do
+    -- Loop through the children to find any ScreenGui
+    local parentFolder = gethui and gethui() or game.CoreGui
+    for i, v in pairs(parentFolder:GetChildren()) do
         if v.ClassName == "ScreenGui" then
             v.Enabled = isUIEnabled  -- Update the UI's Enabled property
         end
@@ -3108,7 +3109,8 @@ for i = 1, length do
 	randomString = randomString .. charTable[math.random(1, #charTable)]
 end
 
-for i, v in pairs(game.CoreGui:WaitForChild("RobloxGui"):WaitForChild("Modules"):GetChildren()) do
+local parentFolder = gethui and gethui() or game.CoreGui
+for i, v in pairs(parentFolder:GetChildren()) do
 	if v.ClassName == "ScreenGui" then
 	    local MrMaxNaJa = Instance.new("ScreenGui")
 		for i1, v1 in pairs(v:GetChildren()) do
@@ -3117,7 +3119,7 @@ for i, v in pairs(game.CoreGui:WaitForChild("RobloxGui"):WaitForChild("Modules")
 					local ui = v
 					if ui then
 						ui:Destroy()
-						game:GetService("CoreGui").ScreenGui:Destroy()
+						pcall(function() game:GetService("CoreGui").ScreenGui:Destroy() end)
 					end
 				end
 			end
@@ -3222,7 +3224,11 @@ end
 
 local UI = Instance.new("ScreenGui")
 UI.Name = randomString
-UI.Parent = game.CoreGui:WaitForChild("RobloxGui"):WaitForChild("Modules")
+if gethui then
+    UI.Parent = gethui()
+else
+    UI.Parent = game.CoreGui
+end
 UI.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
 if syn then
@@ -3230,8 +3236,8 @@ if syn then
 end
 
 function library:Destroy()
-	library:Destroy()
-	game:GetService("CoreGui").ScreenGui:Destroy()
+	if UI then UI:Destroy() end
+	pcall(function() game:GetService("CoreGui").ScreenGui:Destroy() end)
 end
 
 function library:NaJa()
@@ -3649,10 +3655,12 @@ function library:NaJa()
 	ClickFrame.Size = UDim2.new(1, 0, 0, 48)
 
 	local uitoggled = false
+	local savedSize = UDim2.new(0, 640, 0, 450)
 	UserInputService.InputBegan:Connect(function(io, p)
 		if p then return end
 		if io.KeyCode == UIConfig.Bind then
 			if not uitoggled then
+				savedSize = Main.Size
 				Tween(Main, { Size = UDim2.new(0, 0, 0, 0) }, 0.3)
 				uitoggled = true
 				task.wait(0.3)
@@ -3660,7 +3668,7 @@ function library:NaJa()
 			else
 				UI.Enabled = true
 				Main.Size = UDim2.new(0, 0, 0, 0)
-				Tween(Main, { Size = UDim2.new(0, 640, 0, 450) }, 0.3)
+				Tween(Main, { Size = savedSize }, 0.3)
 				uitoggled = false
 			end
 		end
