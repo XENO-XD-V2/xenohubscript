@@ -2970,16 +2970,7 @@ end
     
 
 function CheckPirateBoat()
-    local checkmmpb = {"PirateBrigade", "PirateBrigade"}
-    for r, v in next, game:GetService("Workspace").Enemies:GetChildren() do
-        if table.find(checkmmpb, v.Name) and v:FindFirstChild("Health") and v.Health.Value > 0 then
-            return v
-        end
-    end
-end
-
-function CheckPirateBoat()
-    local checkmmpb = {"FishBoat"}
+    local checkmmpb = {"PirateBrigade", "FishBoat"}
     for r, v in next, game:GetService("Workspace").Enemies:GetChildren() do
         if table.find(checkmmpb, v.Name) and v:FindFirstChild("Health") and v.Health.Value > 0 then
             return v
@@ -3021,7 +3012,16 @@ local success, Rayfield = pcall(function()
 end)
 
 if not success or type(Rayfield) ~= "table" then
-    Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/SiriusSoftwareLtd/Rayfield/main/source.lua'))()
+    local success2, result2 = pcall(function()
+        return loadstring(game:HttpGet('https://raw.githubusercontent.com/SiriusSoftwareLtd/Rayfield/main/source.lua'))()
+    end)
+    if success2 and type(result2) == "table" then
+        Rayfield = result2
+    end
+end
+
+if type(Rayfield) ~= "table" then
+    return warn("Xeno Hub: Failed to load Rayfield UI library.")
 end
 
 local success_win, RayWindow = pcall(function()
