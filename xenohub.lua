@@ -3021,7 +3021,7 @@ local success, Rayfield = pcall(function()
 end)
 
 if not success or type(Rayfield) ~= "table" then
-    Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/shlexware/Rayfield/main/source'))()
+    Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/SiriusSoftwareLtd/Rayfield/main/source.lua'))()
 end
 
 local success_win, RayWindow = pcall(function()
