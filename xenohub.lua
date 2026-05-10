@@ -158,32 +158,38 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
-if not player.Team then
-    if getgenv().Team == "Marines" then
-        ReplicatedStorage.Remotes.CommF_:InvokeServer("SetTeam", "Marines")
-    elseif getgenv().Team == "Pirates" then
-        ReplicatedStorage.Remotes.CommF_:InvokeServer("SetTeam", "Pirates")
-    end
-    repeat
-        task.wait(1)
-        local chooseTeam = playerGui:FindFirstChild("ChooseTeam", true)
-        local uiController = playerGui:FindFirstChild("UIController", true)
-        if chooseTeam and chooseTeam.Visible and uiController then
-            for _, v in pairs(getgc(true)) do
-                if type(v) == "function" and getfenv(v).script == uiController then
-                    local constant = getconstants(v)
+    task.spawn(function()
+        if not player.Team then
+            local teamToJoin = getgenv().Team or "Pirates"
+            if teamToJoin == "Marines" then
+                ReplicatedStorage.Remotes.CommF_:InvokeServer("SetTeam", "Marines")
+            else
+                ReplicatedStorage.Remotes.CommF_:InvokeServer("SetTeam", "Pirates")
+            end
+            
+            local startTime = tick()
+            repeat
+                task.wait(1)
+                local chooseTeam = playerGui:FindFirstChild("ChooseTeam", true)
+                local uiController = playerGui:FindFirstChild("UIController", true)
+                if chooseTeam and chooseTeam.Visible and uiController then
                     pcall(function()
-                        if (constant[1] == "Pirates" or constant[1] == "Marines") and #constant == 1 then
-                            if constant[1] == getgenv().Team then
-                                v(getgenv().Team)
+                        for _, v in pairs(getgc(true)) do
+                            if type(v) == "function" and getfenv(v).script == uiController then
+                                local constant = debug.getconstants(v)
+                                if (constant[1] == "Pirates" or constant[1] == "Marines") and #constant == 1 then
+                                    if constant[1] == teamToJoin then
+                                        v(teamToJoin)
+                                    end
+                                end
                             end
                         end
                     end)
                 end
-            end
+            until player.Team or (tick() - startTime > 15) -- Timeout after 15 seconds
         end
-    until player.Team
-end   
+    end)
+   
    
 hookfunction(require(game:GetService("ReplicatedStorage").Effect.Container.Death), function()end)
 hookfunction(require(game:GetService("ReplicatedStorage").Effect.Container.Respawn), function()end)
@@ -3226,8 +3232,10 @@ local UI = Instance.new("ScreenGui")
 UI.Name = randomString
 if gethui then
     UI.Parent = gethui()
+elseif pcall(function() UI.Parent = game:GetService("CoreGui") end) then
+    -- Parented to CoreGui
 else
-    UI.Parent = game.CoreGui
+    UI.Parent = game:GetService("Players").LocalPlayer:FindFirstChild("PlayerGui")
 end
 UI.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
@@ -4747,7 +4755,16 @@ end
 
 ----------------------------------------------------------------------------------------------------------------------------------------------
 
-local Window = library:NaJa()
+print("Xeno Hub: Initializing UI...")
+local success, Window = pcall(function()
+    return library:NaJa()
+end)
+
+if not success or not Window then
+    warn("Xeno Hub: Failed to initialize UI library. Error: " .. tostring(Window))
+    return
+end
+
 
 local Main = Window:Tab("General","14477284625")
 local AutoQuest = Window:Tab("Items Quest","11446859498")
