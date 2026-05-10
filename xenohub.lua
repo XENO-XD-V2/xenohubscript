@@ -3014,7 +3014,7 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 local RayWindow = Rayfield:CreateWindow({
     Name = "Xeno Hub | Blox Fruits",
     LoadingTitle = "Xeno Hub",
-    LoadingSubtitle = "by Antigravity",
+    LoadingSubtitle = "by Xeno Hub",
     ConfigurationSaving = { Enabled = true, FolderName = "XenoHub", FileName = "Config" },
     Discord = { Enabled = false },
     KeySystem = false
@@ -3022,574 +3022,128 @@ local RayWindow = Rayfield:CreateWindow({
 
 local library = {}
 function library:NaJa()
-	UserInputService.InputBegan:Connect(function(input, gameProcessed)
-		if gameProcessed then return end
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-			if panelOpen then
-				local mp = input.Position
-				local pp, ps = SizePanel.AbsolutePosition, SizePanel.AbsoluteSize
-				local bp, bs = SizeDropdown.AbsolutePosition, SizeDropdown.AbsoluteSize
-				local inPanel = mp.X >= pp.X and mp.X <= pp.X + ps.X and mp.Y >= pp.Y and mp.Y <= pp.Y + ps.Y
-				local inBtn = mp.X >= bp.X and mp.X <= bp.X + bs.X and mp.Y >= bp.Y and mp.Y <= bp.Y + bs.Y
-				if not inPanel and not inBtn then
-					panelOpen = false
-					Tween(SizePanel, { Size = UDim2.new(0, 112, 0, 0) }, 0.18)
-				end
-			end
-		end
-	end)
+    local window_wrapper = {}
+    function window_wrapper:Tab(name, iconid)
+        local icon = tostring(iconid or "")
+        if not icon:find("rbxassetid") and tonumber(icon) then
+            icon = "rbxassetid://" .. icon
+        elseif icon == "" then
+            icon = nil
+        end
+        local RayTab = RayWindow:CreateTab(name, icon)
+        local tab_wrapper = {}
+        
+        function tab_wrapper:Section(name, side)
+            local RaySection = RayTab:CreateSection(name)
+            local section_wrapper = {}
+            
+            function section_wrapper:Toggle(name, default, callback)
+                return RayTab:CreateToggle({
+                    Name = name,
+                    CurrentValue = default,
+                    Flag = name:gsub("%s+", ""),
+                    Callback = callback
+                })
+            end
+            
+            function section_wrapper:Dropdown(name, options, default, callback)
+                local def = (type(default) == "table" and default[1]) or default or options[1]
+                return RayTab:CreateDropdown({
+                    Name = name,
+                    Options = options,
+                    CurrentValue = def,
+                    MultiSelection = false,
+                    Flag = name:gsub("%s+", ""),
+                    Callback = callback
+                })
+            end
+            
+            function section_wrapper:Button(name, callback)
+                return RayTab:CreateButton({
+                    Name = name,
+                    Callback = callback
+                })
+            end
+            
+            function section_wrapper:Slider(name, min, max, default, callback)
+                return RayTab:CreateSlider({
+                    Name = name,
+                    Range = {min, max},
+                    Increment = 1,
+                    Suffix = "",
+                    CurrentValue = default,
+                    Flag = name:gsub("%s+", ""),
+                    Callback = callback
+                })
+            end
 
-	-- ── SIDEBAR ───────────────────────────────────────────────
-	local Sidebar = Instance.new("Frame")
-	Sidebar.Name = "Sidebar"
-	Sidebar.Parent = Main
-	Sidebar.BackgroundColor3 = Surface
-	Sidebar.BackgroundTransparency = 0
-	Sidebar.BorderSizePixel = 0
-	Sidebar.Position = UDim2.new(0, 0, 0, 48)
-	Sidebar.Size = UDim2.new(0, 150, 1, -48)
+            function section_wrapper:Label(text)
+                return RayTab:CreateLabel(text)
+            end
 
-	-- Right border on sidebar
-	local SidebarBorder = Instance.new("Frame")
-	SidebarBorder.Parent = Sidebar
-	SidebarBorder.BackgroundColor3 = Border
-	SidebarBorder.BackgroundTransparency = 0
-	SidebarBorder.BorderSizePixel = 0
-	SidebarBorder.Position = UDim2.new(1, -1, 0, 0)
-	SidebarBorder.Size = UDim2.new(0, 1, 1, 0)
+            function section_wrapper:Seperator(text)
+                return RayTab:CreateSection(text)
+            end
+            
+            return section_wrapper
+        end
+        return tab_wrapper
+    end
+    return window_wrapper
+end
 
-	local TabContainer = Instance.new("ScrollingFrame")
-	TabContainer.Name = "TabContainer"
-	TabContainer.Parent = Sidebar
-	TabContainer.BackgroundTransparency = 1
-	TabContainer.Position = UDim2.new(0, 0, 0, 8)
-	TabContainer.Size = UDim2.new(1, 0, 1, -16)
-	TabContainer.ScrollBarThickness = 0
-	TabContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
+function library:Destroy()
+    Rayfield:Destroy()
+end
 
-	local TabList = Instance.new("UIListLayout")
-	TabList.Parent = TabContainer
-	TabList.SortOrder = Enum.SortOrder.LayoutOrder
-	TabList.Padding = UDim.new(0, 2)
+-- New Features Logic --
+_G.FarmPosition = "Top"
+_G.GunMastery = false
+_G.Fly = false
+_G.FlySpeed = 50
 
-	local TabPadding = Instance.new("UIPadding")
-	TabPadding.Parent = TabContainer
-	TabPadding.PaddingLeft = UDim.new(0, 8)
-	TabPadding.PaddingRight = UDim.new(0, 8)
-	TabPadding.PaddingTop = UDim.new(0, 4)
+task.spawn(function()
+    local plr = game.Players.LocalPlayer
+    while task.wait() do
+        pcall(function()
+            if _G.Fly then
+                local char = plr.Character
+                if char and char:FindFirstChild("HumanoidRootPart") then
+                    local root = char.HumanoidRootPart
+                    local bv = root:FindFirstChild("XenoFly") or Instance.new("BodyVelocity", root)
+                    bv.Name = "XenoFly"
+                    bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+                    
+                    local camera = workspace.CurrentCamera
+                    local moveDir = Vector3.new(0,0,0)
+                    local uis = game:GetService("UserInputService")
+                    
+                    if uis:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + camera.CFrame.LookVector end
+                    if uis:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - camera.CFrame.LookVector end
+                    if uis:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - camera.CFrame.RightVector end
+                    if uis:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + camera.CFrame.RightVector end
+                    if uis:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0,1,0) end
+                    if uis:IsKeyDown(Enum.KeyCode.LeftControl) then moveDir = moveDir - Vector3.new(0,1,0) end
+                    
+                    bv.Velocity = moveDir * _G.FlySpeed
+                end
+            else
+                if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and plr.Character.HumanoidRootPart:FindFirstChild("XenoFly") then
+                    plr.Character.HumanoidRootPart.XenoFly:Destroy()
+                end
+            end
+        end)
+    end
+end)
 
-	-- ── CONTENT AREA ──────────────────────────────────────────
-	local Bottom = Instance.new("Frame")
-	Bottom.Name = "Bottom"
-	Bottom.Parent = Main
-	Bottom.BackgroundTransparency = 1
-	Bottom.Position = UDim2.new(0, 150, 0, 48)
-	Bottom.Size = UDim2.new(1, -150, 1, -48)
+local function getFarmOffset()
+    if _G.FarmPosition == "Under" then
+        return CFrame.new(0, -10, 0)
+    elseif _G.FarmPosition == "Behind" then
+        return CFrame.new(0, 0, 5)
+    end
+    return CFrame.new(0, 10, 0)
 
-	-- Drag & Toggle
-	local ClickFrame = Instance.new("Frame")
-	ClickFrame.Name = "Top"
-	ClickFrame.Parent = Main
-	ClickFrame.BackgroundTransparency = 1
-	ClickFrame.Size = UDim2.new(1, 0, 0, 48)
-
-	local uitoggled = false
-	local savedSize = UDim2.new(0, 640, 0, 450)
-	UserInputService.InputBegan:Connect(function(io, p)
-		if p then return end
-		if io.KeyCode == UIConfig.Bind then
-			if not uitoggled then
-				savedSize = Main.Size
-				Tween(Main, { Size = UDim2.new(0, 0, 0, 0) }, 0.3)
-				uitoggled = true
-				task.wait(0.3)
-				UI.Enabled = false
-			else
-				UI.Enabled = true
-				Main.Size = UDim2.new(0, 0, 0, 0)
-				Tween(Main, { Size = savedSize }, 0.3)
-				uitoggled = false
-			end
-		end
-	end)
-
-	if dragify then dragify(ClickFrame, Main) end
-
-	local tabs = {}
-	local S = false
-
-	function tabs:Tab(Name, icon)
-		local TabBtn = Instance.new("TextButton")
-		TabBtn.Name = Name .. "Tab"
-		TabBtn.Parent = TabContainer
-		TabBtn.BackgroundColor3 = Raised
-		TabBtn.BackgroundTransparency = 1
-		TabBtn.Size = UDim2.new(1, 0, 0, 36)
-		TabBtn.AutoButtonColor = false
-		TabBtn.Font = Enum.Font.GothamBold
-		TabBtn.Text = ""
-
-		local TabBtnCorner = Instance.new("UICorner")
-		TabBtnCorner.CornerRadius = UDim.new(0, 6)
-		TabBtnCorner.Parent = TabBtn
-
-		local TabIndicator = Instance.new("Frame")
-		TabIndicator.Name = "Indicator"
-		TabIndicator.Parent = TabBtn
-		TabIndicator.BackgroundColor3 = Accent
-		TabIndicator.BorderSizePixel = 0
-		TabIndicator.Position = UDim2.new(0, 0, 0.5, -8)
-		TabIndicator.Size = UDim2.new(0, 2, 0, 16)
-		TabIndicator.BackgroundTransparency = 1
-		local IndCorner = Instance.new("UICorner")
-		IndCorner.CornerRadius = UDim.new(1, 0)
-		IndCorner.Parent = TabIndicator
-
-		local TabIcon = Instance.new("ImageLabel")
-		TabIcon.Name = "TabIcon"
-		TabIcon.Parent = TabBtn
-		TabIcon.BackgroundTransparency = 1
-		TabIcon.Position = UDim2.new(0, 10, 0.5, -8)
-		TabIcon.Size = UDim2.new(0, 16, 0, 16)
-		TabIcon.Image = "http://www.roblox.com/asset/?id=" .. tostring(icon)
-		TabIcon.ImageColor3 = TxtMut
-
-		local TabLabel = Instance.new("TextLabel")
-		TabLabel.Name = "TabLabel"
-		TabLabel.Parent = TabBtn
-		TabLabel.BackgroundTransparency = 1
-		TabLabel.Position = UDim2.new(0, 34, 0, 0)
-		TabLabel.Size = UDim2.new(1, -40, 1, 0)
-		TabLabel.Font = Enum.Font.Gotham
-		TabLabel.Text = Name
-		TabLabel.TextColor3 = TxtMut
-		TabLabel.TextSize = 12
-		TabLabel.TextXAlignment = Enum.TextXAlignment.Left
-
-		local Page = Instance.new("ScrollingFrame")
-		Page.Name = Name .. "Page"
-		Page.Parent = Bottom
-		Page.BackgroundTransparency = 1
-		Page.Position = UDim2.new(0, 0, 0, 0)
-		Page.Size = UDim2.new(1, 0, 1, 0)
-		Page.ScrollBarThickness = 2
-		Page.ScrollBarImageColor3 = Border
-		Page.CanvasSize = UDim2.new(0, 0, 0, 0)
-		Page.Visible = false
-
-		local PageLayout = Instance.new("UIListLayout")
-		PageLayout.Parent = Page
-		PageLayout.FillDirection = Enum.FillDirection.Horizontal
-		PageLayout.SortOrder = Enum.SortOrder.LayoutOrder
-		PageLayout.Padding = UDim.new(0, 10)
-
-		local PagePadding = Instance.new("UIPadding")
-		PagePadding.Parent = Page
-		PagePadding.PaddingLeft = UDim.new(0, 12)
-		PagePadding.PaddingRight = UDim.new(0, 12)
-		PagePadding.PaddingTop = UDim.new(0, 12)
-		PagePadding.PaddingBottom = UDim.new(0, 12)
-
-		local Left = Instance.new("ScrollingFrame")
-		Left.Name = "Left"
-		Left.Parent = Page
-		Left.BackgroundTransparency = 1
-		Left.Size = UDim2.new(0.5, -5, 1, 0)
-		Left.ScrollBarThickness = 0
-		Left.CanvasSize = UDim2.new(0, 0, 0, 0)
-
-		local Right = Instance.new("ScrollingFrame")
-		Right.Name = "Right"
-		Right.Parent = Page
-		Right.BackgroundTransparency = 1
-		Right.Size = UDim2.new(0.5, -5, 1, 0)
-		Right.ScrollBarThickness = 0
-		Right.CanvasSize = UDim2.new(0, 0, 0, 0)
-
-		local LeftList = Instance.new("UIListLayout")
-		LeftList.Parent = Left
-		LeftList.SortOrder = Enum.SortOrder.LayoutOrder
-		LeftList.Padding = UDim.new(0, 8)
-
-		local RightList = Instance.new("UIListLayout")
-		RightList.Parent = Right
-		RightList.SortOrder = Enum.SortOrder.LayoutOrder
-		RightList.Padding = UDim.new(0, 8)
-
-		local function updateCanvas()
-			Left.CanvasSize = UDim2.new(0, 0, 0, LeftList.AbsoluteContentSize.Y + 10)
-			Right.CanvasSize = UDim2.new(0, 0, 0, RightList.AbsoluteContentSize.Y + 10)
-			Page.CanvasSize = UDim2.new(0, 0, 0, math.max(LeftList.AbsoluteContentSize.Y, RightList.AbsoluteContentSize.Y) + 40)
-			TabContainer.CanvasSize = UDim2.new(0, 0, 0, TabList.AbsoluteContentSize.Y + 10)
-		end
-		LeftList:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateCanvas)
-		RightList:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateCanvas)
-		TabList:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateCanvas)
-		task.defer(updateCanvas)
-
-		if S == false then
-			S = true
-			Page.Visible = true
-			TabLabel.TextColor3 = TxtPri
-			TabLabel.Font = Enum.Font.GothamBold
-			TabIcon.ImageColor3 = Accent
-			TabIndicator.BackgroundTransparency = 0
-			TabBtn.BackgroundTransparency = 0.88
-		end
-
-		TabBtn.MouseButton1Click:Connect(function()
-			for _, x in pairs(TabContainer:GetChildren()) do
-				if x:IsA("TextButton") then
-					local ind = x:FindFirstChild("Indicator")
-					if ind then Tween(ind, { BackgroundTransparency = 1 }, 0.2) end
-					local ic = x:FindFirstChild("TabIcon")
-					if ic then Tween(ic, { ImageColor3 = TxtMut }, 0.2) end
-					local lbl = x:FindFirstChild("TabLabel")
-					if lbl then
-						Tween(lbl, { TextColor3 = TxtMut }, 0.2)
-						lbl.Font = Enum.Font.Gotham
-					end
-					Tween(x, { BackgroundTransparency = 1 }, 0.2)
-				end
-			end
-			for _, y in pairs(Bottom:GetChildren()) do
-				if y:IsA("ScrollingFrame") then y.Visible = false end
-			end
-			TabLabel.Font = Enum.Font.GothamBold
-			Tween(TabLabel, { TextColor3 = TxtPri }, 0.2)
-			Tween(TabIcon, { ImageColor3 = Accent }, 0.2)
-			Tween(TabIndicator, { BackgroundTransparency = 0 }, 0.2)
-			Tween(TabBtn, { BackgroundTransparency = 0.88 }, 0.2)
-			Page.Visible = true
-		end)
-		TabBtn.MouseEnter:Connect(function()
-			if not Page.Visible then Tween(TabBtn, { BackgroundTransparency = 0.93 }, 0.14) end
-		end)
-		TabBtn.MouseLeave:Connect(function()
-			if not Page.Visible then Tween(TabBtn, { BackgroundTransparency = 1 }, 0.14) end
-		end)
-
-		local function GetType(value)
-			return value == "Right" and Right or Left
-		end
-
-		local sections = {}
-
-		function sections:Section(Name, side)
-			local parent = GetType(side)
-
-			local Section = Instance.new("Frame")
-			Section.Name = Name .. "Section"
-			Section.Parent = parent
-			Section.BackgroundColor3 = Card
-			Section.BackgroundTransparency = 0
-			Section.BorderSizePixel = 0
-			Section.Size = UDim2.new(1, 0, 0, 100)
-			Section.AutomaticSize = Enum.AutomaticSize.Y
-
-			local SectionCorner = Instance.new("UICorner")
-			SectionCorner.CornerRadius = UDim.new(0, 8)
-			SectionCorner.Parent = Section
-
-			local SectionStroke = Instance.new("UIStroke")
-			SectionStroke.Color = Border
-			SectionStroke.Thickness = 1
-			SectionStroke.Parent = Section
-
-			local SectionTop = Instance.new("Frame")
-			SectionTop.Name = "Top"
-			SectionTop.Parent = Section
-			SectionTop.BackgroundTransparency = 1
-			SectionTop.Size = UDim2.new(1, 0, 0, 34)
-
-			local SectionTitle = Instance.new("TextLabel")
-			SectionTitle.Name = "Sectionname"
-			SectionTitle.Parent = SectionTop
-			SectionTitle.BackgroundTransparency = 1
-			SectionTitle.Position = UDim2.new(0, 14, 0, 0)
-			SectionTitle.Size = UDim2.new(1, -28, 1, 0)
-			SectionTitle.Font = Enum.Font.GothamBold
-			SectionTitle.Text = string.upper(Name)
-			SectionTitle.TextColor3 = TxtMut
-			SectionTitle.TextSize = 9
-			SectionTitle.TextXAlignment = Enum.TextXAlignment.Left
-
-			local SectionLine = Instance.new("Frame")
-			SectionLine.Name = "Line"
-			SectionLine.Parent = SectionTop
-			SectionLine.BackgroundColor3 = Border
-			SectionLine.BorderSizePixel = 0
-			SectionLine.Position = UDim2.new(0, 0, 1, -1)
-			SectionLine.Size = UDim2.new(1, 0, 0, 1)
-
-			local SectionContainer = Instance.new("Frame")
-			SectionContainer.Name = "SectionContainer"
-			SectionContainer.Parent = Section
-			SectionContainer.BackgroundTransparency = 1
-			SectionContainer.Position = UDim2.new(0, 0, 0, 34)
-			SectionContainer.Size = UDim2.new(1, 0, 0, 0)
-			SectionContainer.AutomaticSize = Enum.AutomaticSize.Y
-
-			local ContainerList = Instance.new("UIListLayout")
-			ContainerList.Parent = SectionContainer
-			ContainerList.SortOrder = Enum.SortOrder.LayoutOrder
-			ContainerList.Padding = UDim.new(0, 6)
-
-			local ContainerPadding = Instance.new("UIPadding")
-			ContainerPadding.Parent = SectionContainer
-			ContainerPadding.PaddingLeft = UDim.new(0, 12)
-			ContainerPadding.PaddingRight = UDim.new(0, 12)
-			ContainerPadding.PaddingTop = UDim.new(0, 8)
-			ContainerPadding.PaddingBottom = UDim.new(0, 12)
-
-			local function resizeSection()
-				Section.Size = UDim2.new(1, 0, 0, ContainerList.AbsoluteContentSize.Y + 54)
-			end
-			ContainerList:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(resizeSection)
-			task.defer(resizeSection)
-
-			local functionitem = {}
-
-			-- ── Label ─────────────────────────────────────────
-			function functionitem:Label(text)
-				local textas = {}
-				local Label = Instance.new("Frame")
-				Label.Name = "Label"
-				Label.Parent = SectionContainer
-				Label.BackgroundTransparency = 1
-				Label.Size = UDim2.new(1, 0, 0, 20)
-				local TextLabel = Instance.new("TextLabel")
-				TextLabel.Name = "Text"
-				TextLabel.Parent = Label
-				TextLabel.BackgroundTransparency = 1
-				TextLabel.Size = UDim2.new(1, 0, 1, 0)
-				TextLabel.Font = Enum.Font.Gotham
-				TextLabel.Text = text
-				TextLabel.TextColor3 = TxtMut
-				TextLabel.TextSize = 11
-				TextLabel.TextXAlignment = Enum.TextXAlignment.Left
-				function textas:Set(newtext) TextLabel.Text = newtext end
-				return textas
-			end
-
-			-- ── LabelColor ────────────────────────────────────
-			function functionitem:LabelColor(text, color)
-				local textas = {}
-				local Label = Instance.new("Frame")
-				Label.Name = "Label"
-				Label.Parent = SectionContainer
-				Label.BackgroundTransparency = 1
-				Label.Size = UDim2.new(1, 0, 0, 20)
-				local TextLabel = Instance.new("TextLabel")
-				TextLabel.Name = "Text"
-				TextLabel.Parent = Label
-				TextLabel.BackgroundTransparency = 1
-				TextLabel.Size = UDim2.new(1, 0, 1, 0)
-				TextLabel.Font = Enum.Font.Gotham
-				TextLabel.Text = text
-				TextLabel.TextColor3 = resolveColor(color)
-				TextLabel.TextSize = 11
-				TextLabel.TextXAlignment = Enum.TextXAlignment.Left
-				function textas:Set(newtext) TextLabel.Text = newtext end
-				return textas
-			end
-
-			-- ── Button ────────────────────────────────────────
-			function functionitem:Button(...)
-				local args = {...}
-				local Name, callback, default
-				if #args == 2 and type(args[2]) == "function" then
-					Name = args[1]; callback = args[2]
-				elseif #args >= 2 and type(args[2]) == "boolean" then
-					Name = args[1]; default = args[2]; callback = args[3] or function() end
-				else
-					Name = args[1] or "Button"
-					callback = args[#args]
-					if type(callback) ~= "function" then callback = function() end end
-				end
-
-				local b3Func = {}
-				local Tgs = default or false
-
-				local ButtonFrame = Instance.new("Frame")
-				ButtonFrame.Name = "Button"
-				ButtonFrame.Parent = SectionContainer
-				ButtonFrame.BackgroundColor3 = Raised
-				ButtonFrame.BackgroundTransparency = 0
-				ButtonFrame.Size = UDim2.new(1, 0, 0, 32)
-				ButtonFrame.BorderSizePixel = 0
-
-				local BtnCorner = Instance.new("UICorner")
-				BtnCorner.CornerRadius = UDim.new(0, 6)
-				BtnCorner.Parent = ButtonFrame
-
-				local BtnStroke = Instance.new("UIStroke")
-				BtnStroke.Color = Border
-				BtnStroke.Thickness = 1
-				BtnStroke.Parent = ButtonFrame
-
-				-- Left accent bar
-				local BtnBar = Instance.new("Frame")
-				BtnBar.Parent = ButtonFrame
-				BtnBar.BackgroundColor3 = Accent
-				BtnBar.BorderSizePixel = 0
-				BtnBar.Position = UDim2.new(0, 0, 0.18, 0)
-				BtnBar.Size = UDim2.new(0, 2, 0.64, 0)
-				local BtnBarCorner = Instance.new("UICorner")
-				BtnBarCorner.CornerRadius = UDim.new(1, 0)
-				BtnBarCorner.Parent = BtnBar
-
-				local BtnText = Instance.new("TextLabel")
-				BtnText.Parent = ButtonFrame
-				BtnText.BackgroundTransparency = 1
-				BtnText.Size = UDim2.new(1, -40, 1, 0)
-				BtnText.Position = UDim2.new(0, 14, 0, 0)
-				BtnText.Font = Enum.Font.Gotham
-				BtnText.Text = tostring(Name)
-				BtnText.TextColor3 = TxtPri
-				BtnText.TextXAlignment = Enum.TextXAlignment.Left
-				BtnText.TextWrapped = false
-				BtnText.ClipsDescendants = true
-				BtnText.ZIndex = 2
-
-				-- Boolean state indicator dot
-				local StatusDot = Instance.new("Frame")
-				StatusDot.Parent = ButtonFrame
-				StatusDot.BackgroundColor3 = TxtMut
-				StatusDot.BorderSizePixel = 0
-				StatusDot.Position = UDim2.new(1, -18, 0.5, -4)
-				StatusDot.Size = UDim2.new(0, 8, 0, 8)
-				StatusDot.Visible = default ~= nil
-				local StatusDotCorner = Instance.new("UICorner")
-				StatusDotCorner.CornerRadius = UDim.new(1, 0)
-				StatusDotCorner.Parent = StatusDot
-
-				local BtnHit = Instance.new("TextButton")
-				BtnHit.Parent = ButtonFrame
-				BtnHit.BackgroundTransparency = 1
-				BtnHit.Size = UDim2.new(1, 0, 1, 0)
-				BtnHit.Text = ""
-				BtnHit.AutoButtonColor = false
-				BtnHit.ZIndex = 3
-
-				local function updateBtnText()
-					task.defer(function() fitText(BtnText, tostring(Name), 12, 9) end)
-				end
-				updateBtnText()
-				BtnText:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateBtnText)
-
-				BtnHit.MouseEnter:Connect(function()
-					Tween(ButtonFrame, { BackgroundColor3 = Color3.fromRGB(25, 30, 42) }, 0.14)
-					Tween(BtnStroke, { Color = Accent }, 0.14)
-				end)
-				BtnHit.MouseLeave:Connect(function()
-					Tween(ButtonFrame, { BackgroundColor3 = Raised }, 0.14)
-					Tween(BtnStroke, { Color = Border }, 0.14)
-				end)
-				BtnHit.MouseButton1Click:Connect(function()
-					if default ~= nil then
-						Tgs = not Tgs
-						b3Func:Update(Tgs)
-					else
-						callback()
-					end
-					if CircleClick then CircleClick(ButtonFrame, Mouse.X, Mouse.Y) end
-				end)
-
-				if default ~= nil then
-					Tgs = default
-					callback(default)
-					StatusDot.BackgroundColor3 = default and Accent or TxtMut
-				end
-
-				function b3Func:Update(state)
-					Tween(StatusDot, { BackgroundColor3 = state and Accent or TxtMut }, 0.2)
-					callback(state)
-					Tgs = state
-				end
-				function b3Func:SetText(newText)
-					Name = tostring(newText)
-					updateBtnText()
-				end
-				return b3Func
-			end
-
-			-- ── Separator ─────────────────────────────────────
-			function functionitem:Seperator(text)
-				local SepFrame = Instance.new("Frame")
-				SepFrame.Name = "Seperator"
-				SepFrame.Parent = SectionContainer
-				SepFrame.BackgroundTransparency = 1
-				SepFrame.Size = UDim2.new(1, 0, 0, 22)
-
-				local SepLine = Instance.new("Frame")
-				SepLine.Parent = SepFrame
-				SepLine.BackgroundColor3 = Border
-				SepLine.BorderSizePixel = 0
-				SepLine.Position = UDim2.new(0, 0, 0.5, 0)
-				SepLine.Size = UDim2.new(1, 0, 0, 1)
-
-				local SepBg = Instance.new("Frame")
-				SepBg.Parent = SepFrame
-				SepBg.BackgroundColor3 = Card
-				SepBg.BackgroundTransparency = 0
-				SepBg.BorderSizePixel = 0
-				SepBg.Position = UDim2.new(0.5, -32, 0, 3)
-				SepBg.Size = UDim2.new(0, 64, 0, 16)
-				local SepBgC = Instance.new("UICorner")
-				SepBgC.CornerRadius = UDim.new(0, 4)
-				SepBgC.Parent = SepBg
-
-				local SepText = Instance.new("TextLabel")
-				SepText.Name = "Sep2"
-				SepText.Parent = SepBg
-				SepText.BackgroundTransparency = 1
-				SepText.Size = UDim2.new(1, 0, 1, 0)
-				SepText.Font = Enum.Font.Gotham
-				SepText.Text = text
-				SepText.TextColor3 = TxtMut
-				SepText.TextSize = 9
-				SepText.TextXAlignment = Enum.TextXAlignment.Center
-			end
-
-			-- ── Toggle ────────────────────────────────────────
-			function functionitem:Toggle(Name, default, callback)
-				local ToglFunc = {}
-				local Tgo = default or false
-				callback = callback or function() end
-
-				local ToggleFrame = Instance.new("Frame")
-				ToggleFrame.Name = "MainToggle"
-				ToggleFrame.Parent = SectionContainer
-				ToggleFrame.BackgroundColor3 = Raised
-				ToggleFrame.BackgroundTransparency = 0
-				ToggleFrame.BorderSizePixel = 0
-				ToggleFrame.ClipsDescendants = true
-				ToggleFrame.Size = UDim2.new(1, 0, 0, 36)
-
-				local ToggleCorner = Instance.new("UICorner")
-				ToggleCorner.CornerRadius = UDim.new(0, 6)
-				ToggleCorner.Parent = ToggleFrame
-
-				local ToggleStroke = Instance.new("UIStroke")
-				ToggleStroke.Color = Border
-				ToggleStroke.Thickness = 1
-				ToggleStroke.Parent = ToggleFrame
-
-				local ToggleText = Instance.new("TextLabel")
-				ToggleText.Name = "Text"
-				ToggleText.Parent = ToggleFrame
-				ToggleText.BackgroundTransparency = 1
-				ToggleText.Position = UDim2.new(0, 12, 0, 0)
-				ToggleText.Size = UDim2.new(1, -66, 1, 0)
-				ToggleText.Font = Enum.Font.Gotham
-				ToggleText.Text = tostring(Name)
-				ToggleText.TextColor3 = TxtMut
-				ToggleText.TextXAlignment = Enum.TextXAlignment.Left
-				ToggleText.TextYAlignment = Enum.TextYAlignment.Center
-				ToggleText.TextWrapped = false
-				ToggleText.ClipsDescendants = true
-				ToggleText.ZIndex = 2
 
 				-- Switch track
 				local SwitchBg = Instance.new("Frame")
@@ -4178,13 +3732,6 @@ function library:NaJa()
 			return functionitem
 		end
 
-		return sections
-	end
-
-	return tabs
-end
-
-----------------------------------------------------------------------------------------------------------------------------------------------
 
 print("Xeno Hub: Initializing Rayfield UI...")
 local success, Window = pcall(function()
@@ -4229,6 +3776,35 @@ local AutoMisc = MiscShop:Section("Misc Auto","Right")
 
 local Status = AutoStatus:Section("Status Number","Left")
 local StatusTime = AutoStatus:Section("Status Time Game","Right")
+
+-- Xeno Hub Features
+Settings:Toggle("Gun Mastery", false, function(v)
+    _G.GunMastery = v
+end)
+
+Settings:Dropdown("Farm Position", {"Top", "Under", "Behind"}, "Top", function(v)
+    _G.FarmPosition = v
+end)
+
+AutoMisc:Toggle("Fly", false, function(v)
+    _G.Fly = v
+end)
+
+AutoMisc:Slider("Fly Speed", 50, 500, 50, function(v)
+    _G.FlySpeed = v
+end)
+
+Teleport:Button("Teleport to World 1", function()
+    game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("TravelMain")
+end)
+
+Teleport:Button("Teleport to World 2", function()
+    game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("TravelDressrosa")
+end)
+
+Teleport:Button("Teleport to World 3", function()
+    game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("TravelZou")
+end)
 
 
 
@@ -4382,7 +3958,7 @@ _G.SelectWeapon = "Melee"
                                                     EquipWeapon(_G.SelectWeapon)
                                                      AutoHaki()                                            
                                                     PosMon = v.HumanoidRootPart.CFrame
-                                                    topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+                                                    topos(v.HumanoidRootPart.CFrame * getFarmOffset())
                                                     v.HumanoidRootPart.CanCollide = false
                                                     v.Humanoid.WalkSpeed = 0
                                                     v.Head.CanCollide = false
@@ -4432,7 +4008,7 @@ _G.SelectWeapon = "Melee"
                                 StartBring = true
                                 AutoHaki()
                                 EquipWeapon(_G.SelectWeapon)
-                                topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+                                topos(v.HumanoidRootPart.CFrame * getFarmOffset())
                                 v.HumanoidRootPart.Size = Vector3.new(60, 60, 60)
                                 v.HumanoidRootPart.Transparency = 1
                                 v.Humanoid.JumpPower = 0
@@ -4481,7 +4057,7 @@ spawn(function()
                  repeat
                  game:GetService("RunService").Heartbeat:Wait()
                  EquipWeapon(game.Players.LocalPlayer.Data.DevilFruit.Value)
-                 topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+                 topos(v.HumanoidRootPart.CFrame * getFarmOffset())
                  PositionSkillMasteryDevilFruit = v.HumanoidRootPart.Position
                  local char = game.Players.LocalPlayer.Character
                  local fruitName = game.Players.LocalPlayer.Data.DevilFruit.Value
@@ -4541,7 +4117,7 @@ spawn(function()
                                 bringmob = true
                                 AutoHaki()
                                 EquipWeapon(_G.SelectWeapon)
-                                topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+                                topos(v.HumanoidRootPart.CFrame * getFarmOffset())
                                 v.HumanoidRootPart.Size = Vector3.new(60, 60, 60)
                                 v.HumanoidRootPart.Transparency = 1
                                 v.Humanoid.WalkSpeed = 0
@@ -4585,7 +4161,7 @@ spawn(function()
                                         bringmob = true
                                         AutoHaki()
                                         EquipWeapon(_G.SelectWeapon)
-                                        topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+                                        topos(v.HumanoidRootPart.CFrame * getFarmOffset())
                                         v.HumanoidRootPart.Size = Vector3.new(60, 60, 60)
                                         v.HumanoidRootPart.Transparency = 1
                                         v.Humanoid.WalkSpeed = 0
@@ -4623,7 +4199,7 @@ spawn(function()
                                 bringmob = true                                
                                 AutoHaki()
                                 EquipWeapon(_G.SelectWeapon)
-                                topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+                                topos(v.HumanoidRootPart.CFrame * getFarmOffset())
                                 v.HumanoidRootPart.Size = Vector3.new(60, 60, 60)
                                 v.HumanoidRootPart.Transparency = 1
                                 v.Humanoid.WalkSpeed = 0
@@ -4670,7 +4246,7 @@ spawn(function()
                                 AutoHaki()
                                 StartBring = false
                                 EquipWeapon(_G.SelectWeapon)
-                                topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+                                topos(v.HumanoidRootPart.CFrame * getFarmOffset())
                                 v.HumanoidRootPart.Size = Vector3.new(60, 60, 60)
                                 v.HumanoidRootPart.Transparency = 1
                                 v.Humanoid.WalkSpeed = 0
@@ -4846,7 +4422,7 @@ end)
                                         StartBring = true
                                         MonFarm = v.Name                
                                         PosMon = v.HumanoidRootPart.CFrame
-                                        topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+                                        topos(v.HumanoidRootPart.CFrame * getFarmOffset())
                                         sethiddenproperty(game.Players.LocalPlayer,"SimulationRadius",math.huge)
                                     until not _G.FarmBone or not v.Parent or v.Humanoid.Health <= 0
                                 end
@@ -4888,7 +4464,7 @@ end)
                                 EquipWeapon(_G.SelectWeapon)
                                 AutoHaki()
                                 v.HumanoidRootPart.Size = Vector3.new(50,50,50)
-                                topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+                                topos(v.HumanoidRootPart.CFrame * getFarmOffset())
                                 game:GetService("VirtualUser"):CaptureController()
                                 game:GetService("VirtualUser"):Button1Down(Vector2.new(1280, 670))
                                 v.HumanoidRootPart.Transparency = 1
@@ -5006,7 +4582,7 @@ end)
                                         PosMon = v.HumanoidRootPart.CFrame
                                         MonFarm = v.Name
                                         v.Head.CanCollide = false
-                                        topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+                                        topos(v.HumanoidRootPart.CFrame * getFarmOffset())
                                         NeedAttacking = true
                                         if v.Name == "Isle Outlaw" then
                                             Bring(v.Name, CFrame.new(-16442.814453125, 116.13899993896484, -264.4637756347656))
@@ -5126,7 +4702,7 @@ end)
                                         PosMon = v.HumanoidRootPart.CFrame
                                         MonFarm = v.Name
                                         v.Head.CanCollide = false
-                                        topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+                                        topos(v.HumanoidRootPart.CFrame * getFarmOffset())
                                         NeedAttacking = true
                                         if v.Name == "Cookie Crafter" then
                                             Bring(v.Name, CFrame.new(-2212.88965, 37.0051041, -11969.2568, 0.458114207, -0, -0.888893366, 0, 1, -0, 0.888893366, 0, 0.458114207))
@@ -5194,7 +4770,7 @@ end)
 											EquipWeapon(_G.SelectWeapon)
 											AutoHaki()                             
 											PosMon = v.HumanoidRootPart.CFrame
-											topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+											topos(v.HumanoidRootPart.CFrame * getFarmOffset())
 											v.HumanoidRootPart.CanCollide = false
 											v.Humanoid.WalkSpeed = 0
 											v.Head.CanCollide = false
@@ -5250,7 +4826,7 @@ end)
 					    					AutoHaki()
                                            EquipWeapon(_G.SelectWeapon)        
 											PosMon = v.HumanoidRootPart.CFrame
-											topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+											topos(v.HumanoidRootPart.CFrame * getFarmOffset())
 											v.HumanoidRootPart.CanCollide = false
 											v.Humanoid.WalkSpeed = 0
 											v.Head.CanCollide = false
@@ -5324,7 +4900,7 @@ end)
                                         StartBring = true
                                         MonFarm = v.Name                
                                         PosMon = v.HumanoidRootPart.CFrame
-                                        topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+                                        topos(v.HumanoidRootPart.CFrame * getFarmOffset())
                                         sethiddenproperty(game.Players.LocalPlayer,"SimulationRadius",math.huge)
                                     until not _G.FarmChocola or not v.Parent or v.Humanoid.Health <= 0
                                 end
@@ -5405,7 +4981,7 @@ end)
                                         v.HumanoidRootPart.CanCollide = false
                                         v.Humanoid.WalkSpeed = 0
                                         v.HumanoidRootPart.Size = Vector3.new(80,80,80)                             
-                                        topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+                                        topos(v.HumanoidRootPart.CFrame * getFarmOffset())
                                         sethiddenproperty(game:GetService("Players").LocalPlayer,"SimulationRadius",math.huge)
                                     until not _G.AutoBoss or not v.Parent or v.Humanoid.Health <= 0
                                 end
@@ -5462,7 +5038,7 @@ end)
                                         StartBring = true
                                         MonFarm = v.Name                
                                         PosMon = v.HumanoidRootPart.CFrame
-                                        topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+                                        topos(v.HumanoidRootPart.CFrame * getFarmOffset())
                                         sethiddenproperty(game.Players.LocalPlayer,"SimulationRadius",math.huge)
                                     until not _G.AutoFarmMaterial or not v.Parent or v.Humanoid.Health <= 0 or not _G.SelectMaterial == 'Farm Leather + Scrap Metal'
                                 end
@@ -5518,7 +5094,7 @@ end)
                                         StartBring = true
                                         MonFarm = v.Name                
                                         PosMon = v.HumanoidRootPart.CFrame
-                                        topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+                                        topos(v.HumanoidRootPart.CFrame * getFarmOffset())
                                         sethiddenproperty(game.Players.LocalPlayer,"SimulationRadius",math.huge)
                                     until not _G.AutoFarmMaterial or not v.Parent or v.Humanoid.Health <= 0 or not _G.SelectMaterial == 'Farm Fish Tail'
                                 end
@@ -5574,7 +5150,7 @@ end)
                                         StartBring = true
                                         MonFarm = v.Name                
                                         PosMon = v.HumanoidRootPart.CFrame
-                                        topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+                                        topos(v.HumanoidRootPart.CFrame * getFarmOffset())
                                         sethiddenproperty(game.Players.LocalPlayer,"SimulationRadius",math.huge)
                                     until not _G.AutoFarmMaterial or not v.Parent or v.Humanoid.Health <= 0 or not _G.SelectMaterial == 'Farm Magma Ore'
                                 end
@@ -5630,7 +5206,7 @@ end)
                                         StartBring = true
                                         MonFarm = v.Name                
                                         PosMon = v.HumanoidRootPart.CFrame
-                                        topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+                                        topos(v.HumanoidRootPart.CFrame * getFarmOffset())
                                         sethiddenproperty(game.Players.LocalPlayer,"SimulationRadius",math.huge)
                                     until not _G.AutoFarmMaterial or not v.Parent or v.Humanoid.Health <= 0 or not _G.SelectMaterial == 'Farm Angel Wings'
                                 end
@@ -5693,7 +5269,7 @@ end
                                         StartBring = true
                                         MonFarm = v.Name                
                                         PosMon = v.HumanoidRootPart.CFrame
-                                        topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+                                        topos(v.HumanoidRootPart.CFrame * getFarmOffset())
                                         sethiddenproperty(game.Players.LocalPlayer,"SimulationRadius",math.huge)
                                     until not _G.AutoFarmMaterial or not v.Parent or v.Humanoid.Health <= 0 or not _G.SelectMaterial == 'Farm Leather + Scrap Metal'
                                 end
@@ -5747,7 +5323,7 @@ end
                                         StartBring = true
                                         MonFarm = v.Name                
                                         PosMon = v.HumanoidRootPart.CFrame
-                                        topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+                                        topos(v.HumanoidRootPart.CFrame * getFarmOffset())
                                         sethiddenproperty(game.Players.LocalPlayer,"SimulationRadius",math.huge)
                                     until not _G.AutoFarmMaterial or not v.Parent or v.Humanoid.Health <= 0 or not _G.SelectMaterial == 'Farm Radiactive Material'
                                 end
@@ -5801,7 +5377,7 @@ end
                                         StartBring = true
                                         MonFarm = v.Name                
                                         PosMon = v.HumanoidRootPart.CFrame
-                                        topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+                                        topos(v.HumanoidRootPart.CFrame * getFarmOffset())
                                         sethiddenproperty(game.Players.LocalPlayer,"SimulationRadius",math.huge)
                                     until not _G.AutoFarmMaterial or not v.Parent or v.Humanoid.Health <= 0 or not _G.SelectMaterial == 'Farm Magma Ore'
                                 end
@@ -5857,7 +5433,7 @@ end
                                         StartBring = true
                                         MonFarm = v.Name                
                                         PosMon = v.HumanoidRootPart.CFrame
-                                        topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+                                        topos(v.HumanoidRootPart.CFrame * getFarmOffset())
                                         sethiddenproperty(game.Players.LocalPlayer,"SimulationRadius",math.huge)
                                     until not _G.AutoFarmMaterial or not v.Parent or v.Humanoid.Health <= 0 or not _G.SelectMaterial == 'Farm Vampire Fang'
                                 end
@@ -5911,7 +5487,7 @@ end
                                         StartBring = true
                                         MonFarm = v.Name                
                                         PosMon = v.HumanoidRootPart.CFrame
-                                        topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+                                        topos(v.HumanoidRootPart.CFrame * getFarmOffset())
                                         sethiddenproperty(game.Players.LocalPlayer,"SimulationRadius",math.huge)
                                     until not _G.AutoFarmMaterial or not v.Parent or v.Humanoid.Health <= 0 or not _G.SelectMaterial == 'Farm Mystic Droplet'
                                 end
@@ -5965,7 +5541,7 @@ end
                                         StartBring = true
                                         MonFarm = v.Name                
                                         PosMon = v.HumanoidRootPart.CFrame
-                                        topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+                                        topos(v.HumanoidRootPart.CFrame * getFarmOffset())
                                         sethiddenproperty(game.Players.LocalPlayer,"SimulationRadius",math.huge)
                                     until not _G.AutoFarmMaterial or not v.Parent or v.Humanoid.Health <= 0 or not _G.SelectMaterial == 'Farm Ectoplasm'
                                 end
@@ -6032,7 +5608,7 @@ end
                                         StartBring = true
                                         MonFarm = v.Name                
                                         PosMon = v.HumanoidRootPart.CFrame
-                                        topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+                                        topos(v.HumanoidRootPart.CFrame * getFarmOffset())
                                         sethiddenproperty(game.Players.LocalPlayer,"SimulationRadius",math.huge)
                                     until not _G.AutoFarmMaterial or not v.Parent or v.Humanoid.Health <= 0 or not _G.SelectMaterial == 'Farm Leather + Scrap Metal'
                                 end
@@ -6088,7 +5664,7 @@ end
                                         StartBring = true
                                         MonFarm = v.Name                
                                         PosMon = v.HumanoidRootPart.CFrame
-                                        topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+                                        topos(v.HumanoidRootPart.CFrame * getFarmOffset())
                                         sethiddenproperty(game.Players.LocalPlayer,"SimulationRadius",math.huge)
                                     until not _G.AutoFarmMaterial or not v.Parent or v.Humanoid.Health <= 0 or not _G.SelectMaterial == 'Farm Fish Tail'
                                 end
@@ -6144,7 +5720,7 @@ end
                                         StartBring = true
                                         MonFarm = v.Name                
                                         PosMon = v.HumanoidRootPart.CFrame
-                                        topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+                                        topos(v.HumanoidRootPart.CFrame * getFarmOffset())
                                         sethiddenproperty(game.Players.LocalPlayer,"SimulationRadius",math.huge)
                                     until not _G.AutoFarmMaterial or not v.Parent or v.Humanoid.Health <= 0 or not _G.SelectMaterial == 'Farm Mini Tusk'
                                 end
@@ -6198,7 +5774,7 @@ end
                                         StartBring = true
                                         MonFarm = v.Name                
                                         PosMon = v.HumanoidRootPart.CFrame
-                                        topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+                                        topos(v.HumanoidRootPart.CFrame * getFarmOffset())
                                         sethiddenproperty(game.Players.LocalPlayer,"SimulationRadius",math.huge)
                                     until not _G.AutoFarmMaterial or not v.Parent or v.Humanoid.Health <= 0 or not _G.SelectMaterial == 'Farm Dragon Scale'
                                 end
@@ -6254,7 +5830,7 @@ end
                                         StartBring = true
                                         MonFarm = v.Name                
                                         PosMon = v.HumanoidRootPart.CFrame
-                                        topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+                                        topos(v.HumanoidRootPart.CFrame * getFarmOffset())
                                         sethiddenproperty(game.Players.LocalPlayer,"SimulationRadius",math.huge)
                                     until not _G.AutoFarmMaterial or not v.Parent or v.Humanoid.Health <= 0 or not _G.SelectMaterial == 'Farm Conjured Cocoa'
                                 end
@@ -6719,7 +6295,7 @@ end)
                 StartBring = true
                v.HumanoidRootPart.Size = Vector3.new(60,60,60)
                  v.HumanoidRootPart.Transparency = 1
-               topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+               topos(v.HumanoidRootPart.CFrame * getFarmOffset())
                 game:GetService("VirtualUser"):CaptureController()
                  game:GetService("VirtualUser"):Button1Down(Vector2.new(1280, 870),workspace.CurrentCamera.CFrame)
               until v.Humanoid.Health <= 0 or not v.Parent or not _G.AutoSecondSea
@@ -6763,7 +6339,7 @@ end
                                             v.HumanoidRootPart.Transparency = 1
                                             v.HumanoidRootPart.CanCollide = false
                                             v.HumanoidRootPart.Size = Vector3.new(50,50,50)
-                                            topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))						
+                                            topos(v.HumanoidRootPart.CFrame * getFarmOffset())						
                                             PosMonBarto =  v.HumanoidRootPart.CFrame
                                             game:GetService'VirtualUser':CaptureController()
                                             game:GetService'VirtualUser':Button1Down(Vector2.new(1280, 672))
@@ -6795,7 +6371,7 @@ end
                                     v.HumanoidRootPart.CanCollide = false
                                     v.HumanoidRootPart.Size = Vector3.new(50,50,50)
                                     v.HumanoidRootPart.CFrame = OldCFrameBartlio
-                                    topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+                                    topos(v.HumanoidRootPart.CFrame * getFarmOffset())
                                     game:GetService'VirtualUser':CaptureController()
                                     game:GetService'VirtualUser':Button1Down(Vector2.new(1280, 672))
                                     sethiddenproperty(game:GetService("Players").LocalPlayer,"SimulationRadius",math.huge)
@@ -6858,7 +6434,7 @@ end
                                     repeat task.wait()
                                         AutoHaki()
                                         EquipWeapon(_G.SelectWeapon)
-                                        topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+                                        topos(v.HumanoidRootPart.CFrame * getFarmOffset())
                                         v.HumanoidRootPart.CFrame = OldCFrameThird
                                         v.HumanoidRootPart.Size = Vector3.new(50,50,50)
                                         v.HumanoidRootPart.CanCollide = false
@@ -6937,7 +6513,7 @@ end
 									StartMagnet = true
 									v.HumanoidRootPart.CanCollide = false
 									v.HumanoidRootPart.Size = Vector3.new(60, 60, 60)
-									topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+									topos(v.HumanoidRootPart.CFrame * getFarmOffset())
 								until v.Humanoid.Health <= 0 or not v.Parent or _G.AutoRaidPirate == false
 								NeedAttacking = false
 								StartMagnet = false
@@ -7009,7 +6585,7 @@ end)
                                                 v.HumanoidRootPart.CanCollide = false
                                                 v.Humanoid.WalkSpeed = 0
                                                 
-                                                topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+                                                topos(v.HumanoidRootPart.CFrame * getFarmOffset())
                                                 game:GetService("VirtualUser"):CaptureController()
                                                 game:GetService("VirtualUser"):Button1Down(Vector2.new(1280,672))
                                                 sethiddenproperty(game:GetService("Players").LocalPlayer,"SimulationRadius",math.huge)
@@ -7064,7 +6640,7 @@ end
                                         v.HumanoidRootPart.CanCollide = false
                                         v.Humanoid.WalkSpeed = 0
                                         v.HumanoidRootPart.Size = Vector3.new(50,50,50)
-                                        topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+                                        topos(v.HumanoidRootPart.CFrame * getFarmOffset())
                                         game:GetService("VirtualUser"):CaptureController()
                                         game:GetService("VirtualUser"):Button1Down(Vector2.new(1280,672))
                                         sethiddenproperty(game.Players.LocalPlayer,"SimulationRadius",math.huge)
@@ -7110,7 +6686,7 @@ end
                                         v.HumanoidRootPart.CanCollide = false
                                         v.Humanoid.WalkSpeed = 0
                                                                      
-                                        topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+                                        topos(v.HumanoidRootPart.CFrame * getFarmOffset())
                                         sethiddenproperty(game:GetService("Players").LocalPlayer,"SimulationRadius",math.huge)
                                     until not _G.AutoDarkBoss or not v.Parent or v.Humanoid.Health <= 0
                                 end
@@ -7147,7 +6723,7 @@ end
                                         v.HumanoidRootPart.CanCollide = false
                                         v.Humanoid.WalkSpeed = 0
                                                                      
-                                        topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+                                        topos(v.HumanoidRootPart.CFrame * getFarmOffset())
                                         sethiddenproperty(game:GetService("Players").LocalPlayer,"SimulationRadius",math.huge)
                                     until not _G.CursedCaptain or not v.Parent or v.Humanoid.Health <= 0
                                 end
@@ -7348,7 +6924,7 @@ end
                                         StartBring = true
                                         v.Humanoid.WalkSpeed = 0
                                         v.HumanoidRootPart.Size = Vector3.new(80,80,80)                             
-                                        topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+                                        topos(v.HumanoidRootPart.CFrame * getFarmOffset())
                                         sethiddenproperty(game:GetService("Players").LocalPlayer,"SimulationRadius",math.huge)
                                     until not _G.AutoGetTushita or not v.Parent or v.Humanoid.Health <= 0
                                 end
@@ -7441,7 +7017,7 @@ end
                                                         v.HumanoidRootPart.CanCollide = false
                                                         v.Humanoid.WalkSpeed = 0
                                                         v.HumanoidRootPart.Size = Vector3.new(80,80,80)                             
-                                                        topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+                                                        topos(v.HumanoidRootPart.CFrame * getFarmOffset())
                                                         game:GetService("VirtualUser"):CaptureController()
                                                         game:GetService("VirtualUser"):Button1Down(Vector2.new(1280,672))
                                                         sethiddenproperty(game:GetService("Players").LocalPlayer,"SimulationRadius",math.huge)
@@ -7471,7 +7047,7 @@ end
                                     if v.Name == "Saber Expert" then
                                         repeat task.wait()
                                             EquipWeapon(_G.SelectWeapon)
-                                            topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+                                            topos(v.HumanoidRootPart.CFrame * getFarmOffset())
                                             v.HumanoidRootPart.Size = Vector3.new(60, 60, 60)
                                             v.HumanoidRootPart.Transparency = 1
                                             v.Humanoid.JumpPower = 0
@@ -7529,7 +7105,7 @@ end
                                         StartBring = true
                                         v.Humanoid.WalkSpeed = 0
                                         v.HumanoidRootPart.Size = Vector3.new(80,80,80)                             
-                                        topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+                                        topos(v.HumanoidRootPart.CFrame * getFarmOffset())
                                         sethiddenproperty(game:GetService("Players").LocalPlayer,"SimulationRadius",math.huge)
                                     until not _G.Autopole or not v.Parent or v.Humanoid.Health <= 0
                                 end
@@ -7565,7 +7141,7 @@ end
                                         v.HumanoidRootPart.CanCollide = false
                                         v.Humanoid.WalkSpeed = 0
                                         v.HumanoidRootPart.Size = Vector3.new(50,50,50)
-                                       topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+                                       topos(v.HumanoidRootPart.CFrame * getFarmOffset())
                                         AttackNoCD()
                                     until not  _G.Autosaw or not v.Parent or v.Humanoid.Health <= 0
                                 end
@@ -7612,7 +7188,7 @@ end
                                         StartBring = true
                                         v.Humanoid.WalkSpeed = 0
                                         v.HumanoidRootPart.Size = Vector3.new(80,80,80)                             
-                                        topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+                                        topos(v.HumanoidRootPart.CFrame * getFarmOffset())
                                         sethiddenproperty(game:GetService("Players").LocalPlayer,"SimulationRadius",math.huge)
                                     until not _G.ChiefWarden or not v.Parent or v.Humanoid.Health <= 0
                                 end
@@ -7647,7 +7223,7 @@ end
                                         StartBring = true
                                         v.Humanoid.WalkSpeed = 0
                                         v.HumanoidRootPart.Size = Vector3.new(80,80,80)                             
-                                        topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+                                        topos(v.HumanoidRootPart.CFrame * getFarmOffset())
                                         sethiddenproperty(game:GetService("Players").LocalPlayer,"SimulationRadius",math.huge)
                                     until not _G.Trident or not v.Parent or v.Humanoid.Health <= 0
                                 end
@@ -7685,7 +7261,7 @@ end
                                         StartBring = true
                                         v.Humanoid.WalkSpeed = 0
                                         v.HumanoidRootPart.Size = Vector3.new(80,80,80)                             
-                                        topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+                                        topos(v.HumanoidRootPart.CFrame * getFarmOffset())
                                         sethiddenproperty(game:GetService("Players").LocalPlayer,"SimulationRadius",math.huge)
                                     until not _G.Longsword or not v.Parent or v.Humanoid.Health <= 0
                                 end
@@ -7720,7 +7296,7 @@ end
                                         StartBring = true
                                         v.Humanoid.WalkSpeed = 0
                                         v.HumanoidRootPart.Size = Vector3.new(80,80,80)                             
-                                        topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+                                        topos(v.HumanoidRootPart.CFrame * getFarmOffset())
                                         sethiddenproperty(game:GetService("Players").LocalPlayer,"SimulationRadius",math.huge)
                                     until not _G.GravityBlade or not v.Parent or v.Humanoid.Health <= 0
                                 end
@@ -7755,7 +7331,7 @@ end
                                         StartBring = true
                                         v.Humanoid.WalkSpeed = 0
                                         v.HumanoidRootPart.Size = Vector3.new(80,80,80)                             
-                                        topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+                                        topos(v.HumanoidRootPart.CFrame * getFarmOffset())
                                         sethiddenproperty(game:GetService("Players").LocalPlayer,"SimulationRadius",math.huge)
                                     until not _G.SwodsFlail or not v.Parent or v.Humanoid.Health <= 0
                                 end
@@ -7797,7 +7373,7 @@ end
                                     v.HumanoidRootPart.Size = Vector3.new(50,50,50)
                                     PosMon = v.HumanoidRootPart.CFrame
                                     MonFarm = v.Name
-                                    topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+                                    topos(v.HumanoidRootPart.CFrame * getFarmOffset())
                                     AttackNoCD()
                                     StartBring = true
                                 until game:GetService("Players").LocalPlayer.Backpack:FindFirstChild("Hidden Key") 
@@ -7838,7 +7414,7 @@ end)
                                         StartBring = true
                                         v.Humanoid.WalkSpeed = 0
                                         v.HumanoidRootPart.Size = Vector3.new(80,80,80)                             
-                                        topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+                                        topos(v.HumanoidRootPart.CFrame * getFarmOffset())
                                         sethiddenproperty(game:GetService("Players").LocalPlayer,"SimulationRadius",math.huge)
                                     until not _G.SwodsDRTrident or not v.Parent or v.Humanoid.Health <= 0
                                 end
@@ -7876,7 +7452,7 @@ end)
                                         StartBring = true
                                         v.Humanoid.WalkSpeed = 0
                                         v.HumanoidRootPart.Size = Vector3.new(80,80,80)                             
-                                        topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+                                        topos(v.HumanoidRootPart.CFrame * getFarmOffset())
                                         sethiddenproperty(game:GetService("Players").LocalPlayer,"SimulationRadius",math.huge)
                                     until not _G.SwodTwinHooks or not v.Parent or v.Humanoid.Health <= 0
                                 end
@@ -7912,7 +7488,7 @@ end)
                                         StartBring = true
                                         v.Humanoid.WalkSpeed = 0
                                         v.HumanoidRootPart.Size = Vector3.new(80,80,80)                             
-                                        topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+                                        topos(v.HumanoidRootPart.CFrame * getFarmOffset())
                                         sethiddenproperty(game:GetService("Players").LocalPlayer,"SimulationRadius",math.huge)
                                     until not _G.SwodCanvander or not v.Parent or v.Humanoid.Health <= 0
                                 end
@@ -7947,7 +7523,7 @@ end)
                                         StartBring = true
                                         v.Humanoid.WalkSpeed = 0
                                         v.HumanoidRootPart.Size = Vector3.new(80,80,80)                             
-                                        topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+                                        topos(v.HumanoidRootPart.CFrame * getFarmOffset())
                                         sethiddenproperty(game:GetService("Players").LocalPlayer,"SimulationRadius",math.huge)
                                     until not _G.SwodsBuddy or not v.Parent or v.Humanoid.Health <= 0
                                 end
@@ -8024,7 +7600,7 @@ end);
                                         StartBring = true
                                         PosMon = v.HumanoidRootPart.CFrame
                                         v.HumanoidRootPart.Size = Vector3.new(80,80,80)                             
-                                        topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+                                        topos(v.HumanoidRootPart.CFrame * getFarmOffset())
                                         game:GetService("VirtualUser"):CaptureController()
                                         game:GetService("VirtualUser"):Button1Down(Vector2.new(1280,672))
                                     until not _G.AutoMobDragon or not v.Parent or v.Humanoid.Health <= 0
@@ -8541,7 +8117,7 @@ spawn(function()
                                     v.HumanoidRootPart.CanCollide = false
                                     v.Humanoid.WalkSpeed = 0
                                     v.HumanoidRootPart.Size = Vector3.new(50,50,50)
-                                    topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+                                    topos(v.HumanoidRootPart.CFrame * getFarmOffset())
                                     sethiddenproperty(game.Players.LocalPlayer,"SimulationRadius",math.huge)
                                 until not  _G.KillGolem or not v.Parent or v.Humanoid.Health <= 0
                             end
@@ -9901,7 +9477,7 @@ end)
                                         v.HumanoidRootPart.CanCollide = false
                                         v.Humanoid.WalkSpeed = 0
                                                                      
-                                        topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+                                        topos(v.HumanoidRootPart.CFrame * getFarmOffset())
                                         sethiddenproperty(game:GetService("Players").LocalPlayer,"SimulationRadius",math.huge)
                                     until not _G.AutoLawRaid or not v.Parent or v.Humanoid.Health <= 0
                                 end
